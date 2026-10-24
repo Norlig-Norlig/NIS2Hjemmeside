@@ -1,0 +1,41 @@
+name: Deploy til Simply.com (FTP)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ftp-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FTP_HOST: ${{ secrets.FTP_HOST }}
+    steps:
+      - name: Tjek secrets
+        if: env.FTP_HOST == ''
+        run: echo "::warning::FTP_HOST secret mangler, så der deployes ikke. Opret FTP_HOST, FTP_USERNAME og FTP_PASSWORD under Settings > Secrets and variables > Actions."
+
+      - uses: actions/checkout@v4
+        if: env.FTP_HOST != ''
+
+      - name: Upload via FTP
+        if: env.FTP_HOST != ''
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./
+          server-dir: ${{ secrets.FTP_SERVER_DIR || '/public_html/' }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/node_modules/**
+            README.md
